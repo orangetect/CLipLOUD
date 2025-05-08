@@ -17,11 +17,18 @@ jobs:
       with:
         python-version: '3.9'
 
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests
-        pip install beautifulsoup4
+        pip install -r requirements.txt
 
     - name: Run script
       run: python ${{ github.workspace }}/collect_ips.py
@@ -30,14 +37,19 @@ jobs:
       run: |
         git config --global user.email "tianshideyou@proton.me"
         git config --global user.name "tianshipapa"
-        
-        # 检查是否有更改
-        if [ -n "$(git status --porcelain)" ]; then
-          git add ip.txt
-          git commit -m "Automatic update"
-          
-          # 使用 GitHub token 进行认证，避免用户名和密码的暴露
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+
+        # 检查 ip.txt 是否存在
+        if [ -f "ip.txt" ]; then
+          # 检查是否有更改
+          if [ -n "$(git status --porcelain)" ]; then
+            git add ip.txt
+            git commit -m "Automatic update"
+
+            # 使用 GitHub token 进行认证
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} HEAD:main
+          else
+            echo "No changes detected, skipping commit."
+          fi
         else
-          echo "No changes detected, skipping commit."
+          echo "ip.txt not found, skipping commit."
         fi
